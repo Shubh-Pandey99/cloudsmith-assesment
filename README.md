@@ -8,11 +8,12 @@ This repository contains a simple Python package that can be built and published
 
 **Setup**
 
-1. Fork the repository to your own GitHub account.
-2. Create Github Actions variables for the following:
-    - `CLOUDSMITH_NAMESPACE`
-    - `CLOUDSMITH_SERVICE_SLUG`
-3. Clone the repository to your local machine to start making changes.
+1. Clone the repository to your local machine
+2. Create a new private repo in your Github namespace
+3. Upload the code to the newly created Github repo
+4. Start debugging!
+5. Make sure to share access with the appointed people in the email
+6. Include a markdown file which includes all 6 issues found 
 
 **Build and Publish Process**
 
