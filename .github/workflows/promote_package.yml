@@ -44,7 +44,7 @@ jobs:
           fi
 
           echo "Tagging package $IDENTIFIER with '$PROMOTION_TAG'"
-          cloudsmith tag add --yes ${{ env.CLOUDSMITH_NAMESPACE }}/${{ env.CLOUDSMITH_STAGING_REPO }}/$IDENTIFIER $PROMOTION_TAG
+          cloudsmith tag add ${{ env.CLOUDSMITH_NAMESPACE }}/${{ env.CLOUDSMITH_STAGING_REPO }}/$IDENTIFIER $PROMOTION_TAG
 
       - name: Promote all packages with 'ready-for-production' tag
         env:
