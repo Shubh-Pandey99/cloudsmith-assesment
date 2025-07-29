@@ -39,12 +39,7 @@ jobs:
         run: ls -la dist/
         shell: bash
 
-      - name: Install Cloudsmith CLI via pip
-        run: |
-          python3 -m pip install --upgrade pip
-          pip install --upgrade cloudsmith-cli --extra-index-url=https://dl.cloudsmith.io/public/cloudsmith/cli/python/index/
-
-      - name: Authenticate to Cloudsmith
+      - name: OIDC Authentication
         uses: cloudsmith-io/cloudsmith-cli-action@v1.0.1
         with:
           oidc-namespace: ${{ secrets.CLOUDSMITH_NAMESPACE }}
