@@ -17,7 +17,6 @@ env:
 permissions:
   contents: read
   actions: read
-  id-token: write
 
 jobs:
   publish:
@@ -44,6 +43,12 @@ jobs:
         run: |
           python3 -m pip install --upgrade pip
           pip install --upgrade cloudsmith-cli --extra-index-url=https://dl.cloudsmith.io/public/cloudsmith/cli/python/index/
+
+      - name: Authenticate to Cloudsmith
+        uses: cloudsmith-io/cloudsmith-cli-action@v1.0.1
+        with:
+          oidc-namespace: ${{ secrets.CLOUDSMITH_NAMESPACE }}
+          oidc-service-slug: ${{ secrets.CLOUDSMITH_SERVICE_SLUG }}
 
       - name: Push package to Cloudsmith
         run: |
