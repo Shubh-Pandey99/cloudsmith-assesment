@@ -46,21 +46,23 @@ jobs:
           echo "Tagging package $IDENTIFIER with '$PROMOTION_TAG'"
           cloudsmith tag add ${{ env.CLOUDSMITH_NAMESPACE }}/${{ env.CLOUDSMITH_STAGING_REPO }}/$IDENTIFIER $PROMOTION_TAG
 
-      - name: Promote all packages with 'ready-for-production' tag
+      - name: Promote all packages tagged with 'ready-for-production'
         env:
           CLOUDSMITH_API_KEY: ${{ env.CLOUDSMITH_API_KEY }}
         run: |
-          echo "Searching for all packages tagged with '$PROMOTION_TAG' in staging repo..."
-          PACKAGE_DATA=$(cloudsmith list package ${{ env.CLOUDSMITH_NAMESPACE }}/${{ env.CLOUDSMITH_STAGING_REPO }} --tag $PROMOTION_TAG -F json)
+          echo "📦 Fetching all packages from staging..."
+          PACKAGE_DATA=$(cloudsmith list packages ${{ env.CLOUDSMITH_NAMESPACE }}/${{ env.CLOUDSMITH_STAGING_REPO }} -F json)
 
-          COUNT=$(echo "$PACKAGE_DATA" | jq '.data | length')
-          if [ "$COUNT" -eq "0" ]; then
-            echo "No packages found with tag '$PROMOTION_TAG'"
+          echo "🔍 Filtering packages tagged with '${{ env.PROMOTION_TAG }}'..."
+          IDENTIFIERS=$(echo "$PACKAGE_DATA" | jq -r --arg TAG "${{ env.PROMOTION_TAG }}" '.data[] | select(.tags[]? == $TAG) | .identifier_perm')
+
+          if [ -z "$IDENTIFIERS" ]; then
+            echo "⚠️ No packages found with tag '${{ env.PROMOTION_TAG }}'"
             exit 0
           fi
 
-          echo "Found $COUNT packages. Promoting to production repo..."
-          for IDENTIFIER in $(echo "$PACKAGE_DATA" | jq -r '.data[].identifier_perm'); do
-            echo "Promoting $IDENTIFIER"
+          echo "🚀 Promoting packages to production:"
+          for IDENTIFIER in $IDENTIFIERS; do
+            echo "➡️ Promoting $IDENTIFIER"
             cloudsmith mv --yes ${{ env.CLOUDSMITH_NAMESPACE }}/${{ env.CLOUDSMITH_STAGING_REPO }}/$IDENTIFIER ${{ env.CLOUDSMITH_PRODUCTION_REPO }}
           done
