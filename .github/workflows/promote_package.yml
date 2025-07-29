@@ -14,7 +14,6 @@ env:
   CLOUDSMITH_PRODUCTION_REPO: 'staging'
   CLOUDSMITH_SERVICE_SLUG: ${{ vars.CLOUDSMITH_SERVICE_SLUG }}
   PACKAGE_NAME: 'example_package'
-  CLOUDSMITH_API_KEY: ${{ secrets.CLOUDSMITH_API_KEY }}
 
 permissions:
   id-token: write
