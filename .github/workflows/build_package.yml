@@ -1,4 +1,5 @@
 name: Build Python Package
+run: python -m build
 
 on:
   push:
@@ -34,6 +35,7 @@ jobs:
           pip install build
 
       - name: Build package
+        run: python -m build
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
