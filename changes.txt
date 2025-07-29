@@ -1,0 +1,27 @@
+pyproject.toml
+
+1. include name and verion
+
+
+build_package.yml
+
+1. Add the run: python -m build line:
+
+- name: Build package
+  run: python -m build
+
+relaese_package.yml
+
+1.Defined   CLOUDSMITH_API_KEY: ${{ secrets.CLOUDSMITH_API_KEY }}
+2.Install Cloudsmith CLI via pip
+- name: Install Cloudsmith CLI via pip
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install --upgrade cloudsmith-cli --extra-index-url=https://dl.cloudsmith.io/public/cloudsmith/cli/python/index/
+
+
+promote_package.yml
+
+1.Staging and Production repositories are **swapped**
+2.Install Cloudsmith CLI
+3. Tag and promote package to production
