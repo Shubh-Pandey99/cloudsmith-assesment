@@ -3,7 +3,8 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-version = "0.1.0"
+name = " cloudsmith-assesment"
+version = "0.0.1"
 authors = [
   { name="Example Author", email="author@example.com" },
 ]
