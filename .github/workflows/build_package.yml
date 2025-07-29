@@ -1,5 +1,4 @@
 name: Build Python Package
-run: python -m build
 
 on:
   push:
