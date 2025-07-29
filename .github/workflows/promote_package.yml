@@ -6,36 +6,42 @@ on:
       package_version:
         description: 'Package version to promote (e.g., 0.0.1)'
         required: true
-        type: string
 
 env:
-  CLOUDSMITH_NAMESPACE: ${{ vars.CLOUDSMITH_NAMESPACE }}
-  CLOUDSMITH_STAGING_REPO: 'staging'
-  CLOUDSMITH_PRODUCTION_REPO: 'production'
-  CLOUDSMITH_SERVICE_SLUG: ${{ vars.CLOUDSMITH_SERVICE_SLUG }}
-  CLOUDSMITH_API_KEY: ${{ secrets.CLOUDSMITH_API_KEY }}
-  PROMOTION_TAG: 'ready-for-production'
-
-permissions:
-  contents: read
+  CLOUDSMITH_NAMESPACE: interview-shubh-pandey
+  CLOUDSMITH_STAGING_REPO: staging
+  CLOUDSMITH_PRODUCTION_REPO: production
 
 jobs:
   promote:
     runs-on: ubuntu-latest
+
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install jq
+        run: sudo apt-get install -y jq
+
       - name: Install Cloudsmith CLI
-        run: |
-          python3 -m pip install --upgrade pip
-          pip install --upgrade cloudsmith-cli --extra-index-url=https://dl.cloudsmith.io/public/cloudsmith/cli/python/index/
+        run: pip install cloudsmith-cli
 
-      - name: Tag the package with 'ready-for-production'
-        env:
-          CLOUDSMITH_API_KEY: ${{ env.CLOUDSMITH_API_KEY }}
+      - name: Authenticate Cloudsmith
+        run: cloudsmith login --api-key ${{ secrets.CLOUDSMITH_API_KEY }}
+
+      - name: Tag and promote package to production
         run: |
-          PACKAGE_VERSION="${{ inputs.package_version }}"
+          PACKAGE_VERSION="${{ github.event.inputs.package_version }}"
           echo "Received input to promote version: $PACKAGE_VERSION"
-
+          
+          echo "Fetching package metadata from Cloudsmith..."
           PACKAGE_DATA=$(cloudsmith list package ${{ env.CLOUDSMITH_NAMESPACE }}/${{ env.CLOUDSMITH_STAGING_REPO }} -q "version:$PACKAGE_VERSION" -F json)
+
           IDENTIFIER=$(echo "$PACKAGE_DATA" | jq -r '.data[0].identifier_perm')
 
           if [ -z "$IDENTIFIER" ] || [ "$IDENTIFIER" == "null" ]; then
@@ -43,26 +49,8 @@ jobs:
             exit 1
           fi
 
-          echo "Tagging package $IDENTIFIER with '${{ env.PROMOTION_TAG }}'"
-          cloudsmith tag add ${{ env.CLOUDSMITH_NAMESPACE }}/${{ env.CLOUDSMITH_STAGING_REPO }}/$IDENTIFIER ${{ env.PROMOTION_TAG }}
+          echo "Tagging package $IDENTIFIER with 'ready-for-production'..."
+          cloudsmith tag add ${{ env.CLOUDSMITH_NAMESPACE }}/${{ env.CLOUDSMITH_STAGING_REPO }}/$IDENTIFIER ready-for-production
 
-      - name: Promote tagged packages to production
-        env:
-          CLOUDSMITH_API_KEY: ${{ env.CLOUDSMITH_API_KEY }}
-        run: |
-          echo "Fetching all packages from staging..."
-          PACKAGE_DATA=$(cloudsmith list packages ${{ env.CLOUDSMITH_NAMESPACE }}/${{ env.CLOUDSMITH_STAGING_REPO }} -F json)
-
-          echo "Filtering packages tagged with '${{ env.PROMOTION_TAG }}'..."
-          IDENTIFIERS=$(echo "$PACKAGE_DATA" | jq -r --arg TAG "${{ env.PROMOTION_TAG }}" '.data[] | select(.tags[]? == $TAG) | .identifier_perm')
-
-          if [ -z "$IDENTIFIERS" ]; then
-            echo "No packages found with tag '${{ env.PROMOTION_TAG }}'"
-            exit 0
-          fi
-
-          echo "Promoting packages to production..."
-          for IDENTIFIER in $IDENTIFIERS; do
-            echo "Promoting $IDENTIFIER"
-            cloudsmith mv --yes ${{ env.CLOUDSMITH_NAMESPACE }}/${{ env.CLOUDSMITH_STAGING_REPO }}/$IDENTIFIER ${{ env.CLOUDSMITH_PRODUCTION_REPO }}
-          done
+          echo "Promoting package $IDENTIFIER to production..."
+          cloudsmith mv --yes ${{ env.CLOUDSMITH_NAMESPACE }}/${{ env.CLOUDSMITH_STAGING_REPO }}/$IDENTIFIER ${{ env.CLOUDSMITH_PRODUCTION_REPO }}
