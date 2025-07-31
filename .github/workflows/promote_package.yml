@@ -6,50 +6,46 @@ on:
       package_version:
         description: 'Package version to promote (e.g., 0.0.1)'
         required: true
+        type: string
 
 env:
-  CLOUDSMITH_NAMESPACE: interview-shubh-pandey
-  CLOUDSMITH_STAGING_REPO: staging
-  CLOUDSMITH_PRODUCTION_REPO: production
+  CLOUDSMITH_NAMESPACE: ${{ vars.CLOUDSMITH_NAMESPACE }}
+  CLOUDSMITH_STAGING_REPO: 'staging'
+  CLOUDSMITH_PRODUCTION_REPO: 'production'
+  CLOUDSMITH_SERVICE_SLUG: ${{ vars.CLOUDSMITH_SERVICE_SLUG }}
+  PACKAGE_NAME: 'example_package'
+
+permissions:
+  id-token: write
 
 jobs:
   promote:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.x'
-
-      - name: Install jq
-        run: sudo apt-get install -y jq
-
       - name: Install Cloudsmith CLI
-        run: pip install cloudsmith-cli
+        uses: cloudsmith-io/cloudsmith-cli-action@v1.0.1
+        with:
+          oidc-namespace: ${{ env.CLOUDSMITH_NAMESPACE }}
+          oidc-service-slug: ${{ env.CLOUDSMITH_SERVICE_SLUG }}
 
-      - name: Tag and promote package to production
-        env:
-          CLOUDSMITH_API_KEY: ${{ secrets.CLOUDSMITH_API_KEY }}
+      - name: Get package identifier and promote
         run: |
-          PACKAGE_VERSION="${{ github.event.inputs.package_version }}"
-          echo "Received input to promote version: $PACKAGE_VERSION"
-          
-          echo "Fetching package metadata from Cloudsmith..."
-          PACKAGE_DATA=$(cloudsmith list package $CLOUDSMITH_NAMESPACE/$CLOUDSMITH_STAGING_REPO -q "version:$PACKAGE_VERSION" -F json)
+          PACKAGE_QUERY="filename:${PACKAGE_NAME}-${{ github.event.inputs.package_version }}.tar.gz"
+          echo "Searching for package with query: $PACKAGE_QUERY"
+
+          PACKAGE_DATA=$(cloudsmith list package ${{ env.CLOUDSMITH_NAMESPACE }}/${{ env.CLOUDSMITH_STAGING_REPO }} -q "$PACKAGE_QUERY" -F json)
 
           IDENTIFIER=$(echo "$PACKAGE_DATA" | jq -r '.data[0].identifier_perm')
 
-          if [ -z "$IDENTIFIER" ] || [ "$IDENTIFIER" == "null" ]; then
-            echo "No package found with version: $PACKAGE_VERSION"
+          if [ -z "$IDENTIFIER" ] || [ "$IDENTIFIER" = "null" ]; then
+            echo "Failed to find package identifier"
             exit 1
           fi
 
-          echo "Tagging package $IDENTIFIER with 'ready-for-production'..."
-          cloudsmith tag add $CLOUDSMITH_NAMESPACE/$CLOUDSMITH_STAGING_REPO/$IDENTIFIER ready-for-production
+          echo "Found package identifier: $IDENTIFIER"
 
-          echo "Promoting package $IDENTIFIER to production..."
-          cloudsmith mv --yes $CLOUDSMITH_NAMESPACE/$CLOUDSMITH_STAGING_REPO/$IDENTIFIER $CLOUDSMITH_PRODUCTION_REPO
+          cloudsmith mv --yes \
+            ${{ env.CLOUDSMITH_NAMESPACE }}/${{ env.CLOUDSMITH_STAGING_REPO }}/$IDENTIFIER \
+            ${{ env.CLOUDSMITH_PRODUCTION_REPO }}
+        shell: bash
