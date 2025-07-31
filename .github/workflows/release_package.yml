@@ -12,11 +12,11 @@ env:
   CLOUDSMITH_NAMESPACE: ${{ vars.CLOUDSMITH_NAMESPACE }}
   CLOUDSMITH_REPOSITORY: "staging"
   CLOUDSMITH_SERVICE_SLUG: ${{ vars.CLOUDSMITH_SERVICE_SLUG }}
-  CLOUDSMITH_API_KEY: ${{ secrets.CLOUDSMITH_API_KEY }}
 
 permissions:
   contents: read
   actions: read
+  id-token: write
 
 jobs:
   publish:
@@ -33,16 +33,14 @@ jobs:
           github-token: ${{ github.token }}
           run-id: ${{ github.event.workflow_run.id }}
 
-
+      - name: Authenticate to Cloudsmith
+        uses: cloudsmith-io/cloudsmith-cli-action@v1.0.1
+        with:
+          oidc-namespace: ${{ env.CLOUDSMITH_NAMESPACE }}
+          oidc-service-slug: ${{ env.CLOUDSMITH_SERVICE_SLUG }}
 
       - name: List directory contents
         run: ls -la dist/
-        shell: bash
-
-      - name: Install Cloudsmith CLI via pip
-        run: |
-          python3 -m pip install --upgrade pip
-          pip install --upgrade cloudsmith-cli --extra-index-url=https://dl.cloudsmith.io/public/cloudsmith/cli/python/index/
 
       - name: Push package to Cloudsmith
         run: |
